@@ -23,6 +23,8 @@ claude plugin install windmill-plugin
 claude plugin install docx-plugin
 claude plugin install pptx-plugin
 claude plugin install code-simplifier-plugin
+claude plugin install harness-engineering-plugin
+claude plugin install excalidraw-plugin
 ```
 
 ### Install Individual Plugins Directly
@@ -34,6 +36,8 @@ claude plugin install github:mikko-kohtala/agent-tools/plugins/windmill-plugin
 claude plugin install github:mikko-kohtala/agent-tools/plugins/docx-plugin
 claude plugin install github:mikko-kohtala/agent-tools/plugins/pptx-plugin
 claude plugin install github:mikko-kohtala/agent-tools/plugins/code-simplifier-plugin
+claude plugin install github:mikko-kohtala/agent-tools/plugins/harness-engineering-plugin
+claude plugin install github:mikko-kohtala/agent-tools/plugins/excalidraw-plugin
 ```
 
 ## Plugins
@@ -49,6 +53,8 @@ claude plugin install github:mikko-kohtala/agent-tools/plugins/code-simplifier-p
 | [docx-plugin](plugins/docx-plugin/)                           | docx-skill              | -        | -      | -     | [Anthropic](https://github.com/anthropics/skills)             |
 | [pptx-plugin](plugins/pptx-plugin/)                           | pptx-skill              | -        | -      | -     | [Anthropic](https://github.com/anthropics/skills)             |
 | [code-simplifier-plugin](plugins/code-simplifier-plugin/)     | code-simplifier-skill   | simplify | code-simplifier | -     | [Anthropic](https://github.com/anthropics/claude-plugins-official) |
+| [harness-engineering-plugin](plugins/harness-engineering-plugin/) | harness-engineering-skill | harness | harness-engineer | - | [broomva](https://github.com/broomva/harness-engineering-skill) |
+| [excalidraw-plugin](plugins/excalidraw-plugin/) | excalidraw | - | - | - | [edwingao28](https://github.com/edwingao28/excalidraw-skill) |
 
 ## Reference Links
 

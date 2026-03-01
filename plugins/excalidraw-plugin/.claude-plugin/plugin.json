@@ -1,0 +1,11 @@
+{
+  "name": "excalidraw",
+  "description": "Generate diagrams on a live Excalidraw canvas or as .excalidraw files, with cloud icon library support, 9 diagram types, and PNG/SVG/URL export",
+  "version": "2.0.0",
+  "author": {
+    "name": "edwingao28, awesome-copilot"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/mikko-kohtala/agent-tools",
+  "keywords": ["excalidraw", "diagrams", "architecture", "mcp", "visualization", "aws", "cloud-icons", "flowchart"]
+}

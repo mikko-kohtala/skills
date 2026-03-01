@@ -137,6 +137,28 @@
       },
       "category": "documentation",
       "keywords": ["spec", "documentation", "git", "branch-analysis", "reverse-engineering"]
+    },
+    {
+      "name": "harness-engineering-plugin",
+      "source": "./plugins/harness-engineering-plugin",
+      "description": "Implement OpenAI Harness Engineering practices for autonomous agent workflows with control systems, observability, and entropy management.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Mikko Kohtala"
+      },
+      "category": "development",
+      "keywords": ["harness-engineering", "agent-workflows", "control-system", "observability", "openai"]
+    },
+    {
+      "name": "excalidraw-plugin",
+      "source": "./plugins/excalidraw-plugin",
+      "description": "Generate diagrams on a live Excalidraw canvas or as .excalidraw files, with cloud icon library support, 9 diagram types, and PNG/SVG/URL export",
+      "version": "2.0.0",
+      "author": {
+        "name": "edwingao28, awesome-copilot"
+      },
+      "category": "media",
+      "keywords": ["excalidraw", "diagrams", "architecture", "mcp", "visualization", "aws", "cloud-icons", "flowchart"]
     }
   ]
 }

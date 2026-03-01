@@ -45,6 +45,8 @@ Each plugin follows Claude Code's plugin specification:
 | gemini-imagegen-plugin | Image generation via Gemini API |
 | skill-development-plugin | Guide for creating Claude Code skills |
 | code-simplifier-plugin | Simplifies and refines code for clarity and maintainability |
+| harness-engineering-plugin | OpenAI Harness Engineering practices for autonomous agent workflows |
+| excalidraw-plugin | Generate architecture diagrams on a live Excalidraw canvas via MCP |
 
 ## Adding New Plugins
 
