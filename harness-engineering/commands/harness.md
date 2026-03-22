@@ -17,14 +17,14 @@ Analyze the current repository and set up harness engineering workflows, docs, a
 
 2. **Bootstrap**: Run the harness wizard to install templates. Use the `control` profile by default:
    ```bash
-   python3 $SKILL_DIR/skills/harness-engineering-skill/scripts/harness_wizard.py init . --profile control
+   python3 $SKILL_DIR/scripts/harness_wizard.py init . --profile control
    ```
 
 3. **Customize**: Replace template placeholders in generated files with project-specific values. Adapt `scripts/harness/*.sh` to the actual build/test/lint commands.
 
 4. **Validate**: Run the audit to verify completeness:
    ```bash
-   python3 $SKILL_DIR/skills/harness-engineering-skill/scripts/harness_wizard.py audit .
+   python3 $SKILL_DIR/scripts/harness_wizard.py audit .
    ```
 
 5. **Report**: Summarize what was set up, what was customized, and any remaining gaps.

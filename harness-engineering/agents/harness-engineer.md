@@ -15,7 +15,7 @@ Analyze the target repository and apply the following workflow:
 
 2. **Bootstrap Harness Artifacts**: Run the harness wizard to install templates:
    ```bash
-   python3 $SKILL_DIR/skills/harness-engineering-skill/scripts/harness_wizard.py init <repo-path> --profile control
+   python3 $SKILL_DIR/scripts/harness_wizard.py init <repo-path> --profile control
    ```
    Profiles: `baseline` (core artifacts), `control` (+ control primitives), `full` (+ entropy controls).
 
@@ -32,7 +32,7 @@ Analyze the target repository and apply the following workflow:
 
 4. **Validate**: Run audit and treat any `MISSING` or `FAIL` as blocking:
    ```bash
-   python3 $SKILL_DIR/skills/harness-engineering-skill/scripts/harness_wizard.py audit <repo-path>
+   python3 $SKILL_DIR/scripts/harness_wizard.py audit <repo-path>
    ```
 
 5. **Iterate**: Observe agent runs, patch gaps, re-audit, and keep docs aligned with behavior.
