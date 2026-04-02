@@ -40,6 +40,7 @@ A curated collection of skills for CLI-based AI coding assistants (Claude Code, 
 | harness-engineering | OpenAI Harness Engineering practices for agent workflows |
 | excalidraw | Generate architecture diagrams on Excalidraw canvas |
 | grill-me | Stress-test plans and designs through relentless questioning |
+| linear-way | Linear-style product thinking for analyzing requests |
 
 ## Adding New Skills
 

@@ -25,6 +25,7 @@ npx skills add https://github.com/mikko-kohtala/skills --skill reverse-engineer-
 npx skills add https://github.com/mikko-kohtala/skills --skill harness-engineering
 npx skills add https://github.com/mikko-kohtala/skills --skill excalidraw
 npx skills add https://github.com/mikko-kohtala/skills --skill grill-me
+npx skills add https://github.com/mikko-kohtala/skills --skill linear-way
 ```
 
 ## Skills
@@ -45,6 +46,7 @@ npx skills add https://github.com/mikko-kohtala/skills --skill grill-me
 | [harness-engineering](harness-engineering/)           | OpenAI Harness Engineering practices for agent workflows     | [broomva](https://github.com/broomva/harness-engineering-skill)     |
 | [excalidraw](excalidraw/)                             | Generate architecture diagrams on Excalidraw canvas          | [edwingao28](https://github.com/edwingao28/excalidraw-skill)        |
 | [grill-me](grill-me/)                                 | Stress-test plans and designs through relentless questioning | [mattpocock](https://github.com/mattpocock/skills)                  |
+| [linear-way](linear-way/)                             | Linear-style product thinking for analyzing requests         | Mikko Kohtala                                                       |
 
 ## Reference Links
 
