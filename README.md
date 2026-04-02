@@ -2,6 +2,31 @@
 
 A curated collection of skills for Claude Code and other CLI-based AI coding assistants.
 
+## Installation
+
+Install individual skills using the `npx skills add` command:
+
+```sh
+# General syntax
+npx skills add https://github.com/mikko-kohtala/skills --skill <skill-name>
+
+# Individual skills
+npx skills add https://github.com/mikko-kohtala/skills --skill playwright
+npx skills add https://github.com/mikko-kohtala/skills --skill tmux
+npx skills add https://github.com/mikko-kohtala/skills --skill windmill
+npx skills add https://github.com/mikko-kohtala/skills --skill gemini-imagegen
+npx skills add https://github.com/mikko-kohtala/skills --skill skill-development
+npx skills add https://github.com/mikko-kohtala/skills --skill codex
+npx skills add https://github.com/mikko-kohtala/skills --skill docx
+npx skills add https://github.com/mikko-kohtala/skills --skill pptx
+npx skills add https://github.com/mikko-kohtala/skills --skill electron-playwright-test
+npx skills add https://github.com/mikko-kohtala/skills --skill code-simplifier
+npx skills add https://github.com/mikko-kohtala/skills --skill reverse-engineer-spec
+npx skills add https://github.com/mikko-kohtala/skills --skill harness-engineering
+npx skills add https://github.com/mikko-kohtala/skills --skill excalidraw
+npx skills add https://github.com/mikko-kohtala/skills --skill grill-me
+```
+
 ## Skills
 
 | Skill                                                 | Description                                                  | Origin                                                              |

@@ -47,6 +47,8 @@ A curated collection of skills for CLI-based AI coding assistants (Claude Code, 
 2. Add `SKILL.md` with YAML frontmatter (name, description)
 3. Optionally add `commands/`, `agents/`, `scripts/`, `references/` directories
 4. Update README.md with skill description and origin
+5. Add install command to README.md Installation section: `npx skills add https://github.com/mikko-kohtala/skills --skill <skill-name>`
+6. Update this file's Skills table with the new skill
 
 ## Important References
 
