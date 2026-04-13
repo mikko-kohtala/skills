@@ -96,6 +96,7 @@ def collect_sessions(
     """Collect JSONL session files from project directories.
 
     Only collects top-level .jsonl files (not in subagent subdirectories).
+    Returns ALL qualifying sessions (not capped) for frequency analysis.
     """
     sessions = []
     since_ts = None
@@ -130,19 +131,61 @@ def collect_sessions(
 
     sessions.sort(key=lambda s: s["mtime"], reverse=True)
 
-    # Pre-filter by min_turns if needed (quick scan)
+    # Pre-filter by min_turns (scan all, not just max_sessions * 3)
     if min_turns > 1:
         filtered = []
         for s in sessions:
-            if len(filtered) >= max_sessions * 3:  # scan up to 3x to find enough
-                break
             turn_count = _count_user_turns(s["path"])
             if turn_count >= min_turns:
                 s["user_turns"] = turn_count
                 filtered.append(s)
         sessions = filtered
 
-    return sessions[:max_sessions]
+    return sessions
+
+
+def stratified_sample(sessions: list[dict], max_sessions: int = 200) -> list[dict]:
+    """Select a stratified time-based sample from all sessions.
+
+    Distributes quota across monthly buckets to avoid recency bias.
+    Within each bucket, prioritizes sessions with corrections.
+    Returns sessions in chronological order (oldest first).
+    """
+    if len(sessions) <= max_sessions:
+        # All sessions fit — return chronological
+        return sorted(sessions, key=lambda s: s["mtime"])
+
+    # Bucket sessions by month
+    buckets: dict[str, list[dict]] = {}
+    for s in sessions:
+        dt = datetime.fromtimestamp(s["mtime"])
+        month = dt.strftime("%Y-%m")
+        if month not in buckets:
+            buckets[month] = []
+        buckets[month].append(s)
+
+    # Allocate quota proportionally, minimum 2 per bucket
+    total = len(sessions)
+    selected = []
+    for month in sorted(buckets.keys()):
+        bucket = buckets[month]
+        quota = max(2, round(max_sessions * len(bucket) / total))
+
+        # Sort within bucket: sessions with corrections first, then by turn count
+        bucket.sort(
+            key=lambda s: (s.get("has_corrections", False), s.get("user_turns", 0)),
+            reverse=True,
+        )
+        selected.extend(bucket[:quota])
+
+    # If we overshot, trim from the largest buckets
+    if len(selected) > max_sessions:
+        selected.sort(key=lambda s: s["mtime"])
+        selected = selected[:max_sessions]
+
+    # Return in chronological order (oldest first)
+    selected.sort(key=lambda s: s["mtime"])
+    return selected
 
 
 def _count_user_turns(path: str) -> int:
@@ -411,6 +454,227 @@ def format_timestamp(ts: str | None) -> str:
         return "unknown"
 
 
+def _truncate_at_word(text: str, max_len: int) -> str:
+    """Truncate text at a word boundary, replacing newlines with spaces."""
+    text = " ".join(text.split())  # collapse whitespace/newlines
+    if len(text) <= max_len:
+        return text
+    cut = text[:max_len].rfind(" ")
+    if cut < max_len // 2:
+        cut = max_len
+    return text[:cut] + "..."
+
+
+# Tool names that are framework plumbing, not user workflows
+_TOOL_NOISE = {"ToolSearch", "AskUserQuestion", "ExitPlanMode", "EnterPlanMode"}
+
+
+def aggregate_frequency_stats(sessions: list[dict]) -> dict:
+    """Compute frequency statistics across ALL sessions for de-biasing.
+
+    Returns pre-counted tables so the LLM doesn't have to count manually.
+    """
+    import re
+    from collections import Counter
+
+    stats: dict = {
+        "total_sessions": len(sessions),
+        "date_range": (None, None),
+        "corrections": {},       # theme -> {"count": N, "dates": [str]}
+        "tool_patterns": {},     # "ToolName(arg)" -> {"count": N}
+        "tool_names": Counter(), # ToolName -> session count
+        "branches": {},          # branch -> {"count": N, "first": str, "last": str}
+        "file_hotspots": {},     # path -> {"count": N}
+        "monthly": {},           # "YYYY-MM" -> count
+    }
+
+    tool_re = re.compile(r"(\w+)\(([^)]*)\)")
+
+    # For making file paths relative
+    base_path = None
+    for s in sessions:
+        cwd = s.get("cwd")
+        if cwd:
+            base_path = resolve_base_project_path(cwd)
+            break
+
+    for session in sessions:
+        ts = session.get("timestamp")
+        date_str = format_timestamp(ts) if ts else None
+        month = date_str[:7] if date_str and date_str != "unknown" else None
+
+        # Time distribution
+        if month:
+            stats["monthly"][month] = stats["monthly"].get(month, 0) + 1
+
+        # Date range
+        if date_str and date_str != "unknown":
+            if stats["date_range"][0] is None or date_str < stats["date_range"][0]:
+                stats["date_range"] = (date_str, stats["date_range"][1])
+            if stats["date_range"][1] is None or date_str > stats["date_range"][1]:
+                stats["date_range"] = (stats["date_range"][0], date_str)
+
+        # Branch frequency
+        branch = session.get("branch") or "unknown"
+        if branch not in stats["branches"]:
+            stats["branches"][branch] = {"count": 0, "first": date_str, "last": date_str}
+        stats["branches"][branch]["count"] += 1
+        if date_str and date_str != "unknown":
+            b = stats["branches"][branch]
+            if b["first"] is None or date_str < b["first"]:
+                b["first"] = date_str
+            if b["last"] is None or date_str > b["last"]:
+                b["last"] = date_str
+
+        turns = session.get("turns", [])
+        session_tools_seen = set()
+        session_tool_names_seen = set()
+        session_files_seen = set()
+
+        for role, text in turns:
+            # Correction themes
+            if role == "CORRECTION":
+                theme = _truncate_at_word(text.strip().lower(), 80)
+                # Normalize whitespace for grouping
+                theme = " ".join(theme.split())
+                if theme not in stats["corrections"]:
+                    stats["corrections"][theme] = {"count": 0, "dates": []}
+                stats["corrections"][theme]["count"] += 1
+                if date_str and date_str != "unknown":
+                    stats["corrections"][theme]["dates"].append(date_str[:7])
+
+            # Tool patterns from [TOOLS: ...] lines
+            if "[TOOLS: " in text:
+                tools_start = text.index("[TOOLS: ") + 8
+                tools_end = text.find("]", tools_start)
+                if tools_end > tools_start:
+                    tools_str = text[tools_start:tools_end]
+                    for m in tool_re.finditer(tools_str):
+                        name, arg = m.group(1), m.group(2)
+                        # Skip framework plumbing tools
+                        if name in _TOOL_NOISE:
+                            continue
+                        # Track tool names per session
+                        session_tool_names_seen.add(name)
+                        # Track tool+arg combos (dedupe within session)
+                        key = f"{name}({arg})" if arg else name
+                        session_tools_seen.add(key)
+                        # Track file paths from file-editing tools
+                        if name in ("Read", "Edit", "Write") and arg and not arg.endswith("..."):
+                            # Make path relative to base project
+                            path = arg
+                            if base_path and path.startswith("/"):
+                                # Strip worktree prefix too
+                                rel = resolve_base_project_path(path)
+                                if rel.startswith(base_path):
+                                    path = path[len(base_path):].lstrip("/")
+                                    # Also strip worktree component if present
+                                    wt_marker = "-worktrees/"
+                                    if wt_marker in arg:
+                                        idx = arg.index(wt_marker)
+                                        after = arg[idx + len(wt_marker):]
+                                        slash = after.find("/")
+                                        if slash != -1:
+                                            path = after[slash + 1:]
+                            session_files_seen.add(path)
+
+        # Count each tool pattern once per session, with relative paths
+        for key in session_tools_seen:
+            # Make absolute paths relative in tool args
+            if base_path and base_path in key:
+                key = key.replace(base_path + "/", "")
+                # Also strip worktree paths
+                wt_marker = "-worktrees/"
+                if wt_marker in key:
+                    key = re.sub(r"[^(]*-worktrees/[^/]+/", "", key, count=1)
+            if key not in stats["tool_patterns"]:
+                stats["tool_patterns"][key] = {"count": 0}
+            stats["tool_patterns"][key]["count"] += 1
+
+        for name in session_tool_names_seen:
+            stats["tool_names"][name] += 1
+
+        for path in session_files_seen:
+            if path not in stats["file_hotspots"]:
+                stats["file_hotspots"][path] = {"count": 0}
+            stats["file_hotspots"][path]["count"] += 1
+
+    return stats
+
+
+def _date_range_str(first: str | None, last: str | None) -> str:
+    """Format a date range as 'YYYY-MM through YYYY-MM' or similar."""
+    if not first or not last:
+        return ""
+    first_m = first[:7]
+    last_m = last[:7]
+    if first_m == last_m:
+        return f"({first_m})"
+    return f"({first_m} through {last_m})"
+
+
+def format_frequency_section(stats: dict) -> str:
+    """Format aggregated stats into a compact text section for the report top."""
+    total = stats["total_sessions"]
+    dr = stats["date_range"]
+    dr_str = ""
+    if dr[0] and dr[1]:
+        dr_str = f", {dr[0][:7]} through {dr[1][:7]}"
+
+    parts = [f"\n# Frequency Analysis (all {total} sessions{dr_str})\n\n"]
+
+    # Time distribution
+    monthly = stats["monthly"]
+    if monthly:
+        parts.append("## Time Distribution\n")
+        for month in sorted(monthly.keys()):
+            parts.append(f"  {month}: {monthly[month]} sessions\n")
+        parts.append("\n")
+
+    # Corrections — highest signal
+    corrections = stats["corrections"]
+    if corrections:
+        sorted_corrections = sorted(corrections.items(), key=lambda x: x[1]["count"], reverse=True)
+        parts.append("## Corrections (user corrections to Claude, by theme)\n")
+        for theme, data in sorted_corrections[:20]:
+            dates = sorted(set(data["dates"]))
+            spread = ""
+            if dates:
+                spread = f" ({dates[0]} through {dates[-1]})" if dates[0] != dates[-1] else f" ({dates[0]})"
+            parts.append(f'  "{theme}" — {data["count"]} sessions{spread}\n')
+        parts.append("\n")
+
+    # Branch frequency — top 20
+    branches = stats["branches"]
+    if branches:
+        sorted_branches = sorted(branches.items(), key=lambda x: x[1]["count"], reverse=True)
+        parts.append("## Branch Frequency (top 20)\n")
+        for branch, data in sorted_branches[:20]:
+            dr = _date_range_str(data["first"], data["last"])
+            parts.append(f"  {branch}: {data['count']} sessions {dr}\n")
+        parts.append("\n")
+
+    # Tool patterns — top 30 by session count
+    tool_patterns = stats["tool_patterns"]
+    if tool_patterns:
+        sorted_tools = sorted(tool_patterns.items(), key=lambda x: x[1]["count"], reverse=True)
+        parts.append("## Tool Patterns (top 30, by sessions)\n")
+        for pattern, data in sorted_tools[:30]:
+            parts.append(f"  {pattern}: {data['count']} sessions\n")
+        parts.append("\n")
+
+    # File hotspots — top 20
+    file_hotspots = stats["file_hotspots"]
+    if file_hotspots:
+        sorted_files = sorted(file_hotspots.items(), key=lambda x: x[1]["count"], reverse=True)
+        parts.append("## File Hotspots (top 20, by sessions)\n")
+        for path, data in sorted_files[:20]:
+            parts.append(f"  {path}: {data['count']} sessions\n")
+        parts.append("\n")
+
+    return "".join(parts)
+
+
 CLAUDE_PLANS_DIR = os.path.expanduser("~/.claude/plans")
 
 
@@ -500,24 +764,25 @@ def format_plans_section(plans: list[dict]) -> str:
     return "".join(parts)
 
 
-def format_output(sessions: list[dict], max_chars: int, plans: list[dict] | None = None) -> str:
+def format_output(
+    sessions: list[dict],
+    max_chars: int,
+    plans: list[dict] | None = None,
+    frequency_stats: dict | None = None,
+    total_sessions: int | None = None,
+) -> str:
     """Format extracted sessions into structured text output."""
     if not sessions:
         return "# Conversation Mining Report\n\nNo conversations found for this project.\n"
 
-    # Collect stats
-    dates = []
-    for s in sessions:
-        ts = s.get("timestamp")
-        if ts:
-            dates.append(ts)
-
     # Count unique project dirs
     proj_dirs = set(s.get("project_dir", "") for s in sessions)
 
+    total = total_sessions if total_sessions else len(sessions)
     header = (
         "# Conversation Mining Report\n"
-        f"Sessions included: {len(sessions)}\n"
+        f"Sessions analyzed for frequency: {total}\n"
+        f"Sessions included in transcripts: {len(sessions)}\n"
         f"Project directories: {len(proj_dirs)}\n"
     )
     if plans:
@@ -527,7 +792,13 @@ def format_output(sessions: list[dict], max_chars: int, plans: list[dict] | None
     output_parts = [header]
     current_chars = len(header)
 
-    # Plans first — they're higher-signal (decisions, approaches, context)
+    # Frequency analysis first — computed from ALL sessions, never truncated
+    if frequency_stats:
+        freq_text = format_frequency_section(frequency_stats)
+        output_parts.append(freq_text)
+        current_chars += len(freq_text)
+
+    # Plans next — they're higher-signal (decisions, approaches, context)
     if plans:
         plans_text = format_plans_section(plans)
         if current_chars + len(plans_text) < max_chars:
@@ -616,22 +887,44 @@ def main():
     )
     print(f"Sessions after filtering: {len(sessions_meta)}", file=sys.stderr)
 
-    sessions = []
+    # Extract ALL sessions for frequency analysis
+    all_sessions = []
     for i, meta in enumerate(sessions_meta):
         if (i + 1) % 20 == 0:
             print(f"Processing session {i + 1}/{len(sessions_meta)}...", file=sys.stderr)
         session = extract_session(meta["path"])
         if session:
-            sessions.append(session)
+            # Tag the meta with correction info for stratified sampling
+            has_corrections = any(r == "CORRECTION" for r, _ in session.get("turns", []))
+            meta["has_corrections"] = has_corrections
+            all_sessions.append(session)
 
-    print(f"Sessions with content: {len(sessions)}", file=sys.stderr)
+    print(f"Sessions with content: {len(all_sessions)}", file=sys.stderr)
+
+    # Compute frequency stats from ALL sessions before sampling
+    freq_stats = aggregate_frequency_stats(all_sessions)
+    print(f"Frequency stats computed: {freq_stats['total_sessions']} sessions", file=sys.stderr)
+
+    # Stratified sample for transcript output
+    sampled_meta = stratified_sample(sessions_meta, max_sessions=args.max_sessions)
+    sampled_ids = {s["session_id"] for s in sampled_meta}
+    sessions = [s for s in all_sessions if s["session_id"] in sampled_ids]
+    # Sort chronologically (oldest first) to match sample order
+    sessions.sort(key=lambda s: s.get("timestamp") or "")
+    print(f"Sessions in stratified sample: {len(sessions)}", file=sys.stderr)
 
     plans = None
     if not args.no_plans:
         plans = collect_plans(base_path)
         print(f"Related plans found: {len(plans)}", file=sys.stderr)
 
-    output = format_output(sessions, args.max_chars, plans=plans)
+    output = format_output(
+        sessions,
+        args.max_chars,
+        plans=plans,
+        frequency_stats=freq_stats,
+        total_sessions=len(all_sessions),
+    )
     print(output)
 
 

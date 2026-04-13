@@ -25,6 +25,10 @@ The bundled `scripts/extract_conversations.py` handles all filesystem I/O:
 - Extracts user prompts and assistant text responses (skips thinking, subagents)
 - Extracts compact tool-call summaries (`[TOOLS: Read(...), Bash(...)]`) from assistant turns
 - Detects user corrections and tags them as `[CORRECTION]` turns
+- **Computes frequency statistics across ALL sessions** (corrections, tool patterns, branches,
+  file hotspots, time distribution) and outputs them as a pre-computed summary at the top
+- **Uses stratified time-based sampling** to select sessions for transcripts, avoiding
+  recency bias — every time period gets representation, not just recent sessions
 - Filters out injected skill SKILL.md content (extracts only the `ARGUMENTS:` line)
 - Includes related plan files from `~/.claude/plans/` by default
 - Outputs a condensed, token-efficient summary
@@ -60,7 +64,11 @@ Say "already covered: <path>" instead of repeating existing content.
 
 ### Step 3: Analyze for patterns
 
-Read the extracted conversation data and look for:
+Start with the **Frequency Analysis** section at the top of the report. This contains
+pre-computed counts across ALL sessions — use these as ground truth rather than counting
+manually from the transcripts (which are a stratified sample, not the full history).
+
+Then look for:
 
 - **`[CORRECTION]` turns** — User corrections to Claude, auto-detected by the extraction
   script. These are the strongest signal for a missing rule. Start your analysis here.
@@ -72,7 +80,9 @@ Read the extracted conversation data and look for:
 - **Multi-step procedures** — Sequences that could be codified as a skill
 - **Frustration signals** — Repeated clarifications, "I already told you", re-explaining
 
-Weight by frequency: patterns appearing in 3+ sessions are strong candidates.
+Weight by frequency AND time spread: patterns appearing in 3+ sessions across multiple
+months are strong candidates. Patterns appearing only in the most recent 2 weeks may be
+situation-specific — flag these as "low confidence" or drop them.
 User corrections (`[CORRECTION]` turns) are the strongest signal for a missing rule.
 
 ### Step 4: Propose rules and skills
