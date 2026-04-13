@@ -9,7 +9,7 @@ allowed-tools: [Read, Glob, Grep, Bash, Agent]
 - Existing rules and config:
   !`ls -1 .claude/rules/*.md CLAUDE.md 2>/dev/null || echo "(none found)"`
 - Conversation data:
-  !`python3 $SKILL_DIR/scripts/extract_conversations.py --cwd "$(pwd)" --min-turns 2 --max-chars 300000`
+  !`python3 $SKILL_DIR/scripts/extract_conversations.py --cwd "$(pwd)" --min-turns 2 --max-chars 200000`
 
 ## Your task
 

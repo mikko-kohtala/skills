@@ -171,7 +171,7 @@ def _count_user_turns(path: str) -> int:
     return count
 
 
-def extract_session(path: str, max_assistant_chars: int = 300) -> dict | None:
+def extract_session(path: str, max_assistant_chars: int = 800) -> dict | None:
     """Parse a JSONL session file and extract conversation turns.
 
     Returns session metadata and a list of (role, text) turns.
@@ -232,6 +232,28 @@ def extract_session(path: str, max_assistant_chars: int = 300) -> dict | None:
     return metadata
 
 
+def _filter_skill_injection(text: str) -> str | None:
+    """Filter out injected skill SKILL.md content from user messages.
+
+    When a skill is invoked, Claude Code injects the full SKILL.md as a user
+    message starting with "Base directory for this skill:". The actual user
+    intent is in the ARGUMENTS: line at the end. Extract only that.
+    """
+    if not text.startswith("Base directory for this skill:"):
+        return text
+
+    # Look for ARGUMENTS: line — contains the actual user intent
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith("ARGUMENTS:"):
+            args = line[len("ARGUMENTS:"):].strip()
+            if args:
+                return f"[skill invocation] {args}"
+            return None
+    # Skill injection with no arguments — skip entirely
+    return None
+
+
 def _extract_user_text(rec: dict) -> str | None:
     """Extract text from a user message record."""
     msg = rec.get("message", {})
@@ -242,7 +264,10 @@ def _extract_user_text(rec: dict) -> str | None:
     if isinstance(content, str):
         if content.startswith("<"):
             return None
-        return content.strip() if content.strip() else None
+        text = content.strip()
+        if not text:
+            return None
+        return _filter_skill_injection(text)
 
     if isinstance(content, list):
         # Skip if all blocks are tool_result
@@ -260,8 +285,9 @@ def _extract_user_text(rec: dict) -> str | None:
         if not has_non_tool:
             return None
         combined = "\n".join(text_parts).strip()
-        if combined and not combined.startswith("<"):
-            return combined
+        if not combined or combined.startswith("<"):
+            return None
+        return _filter_skill_injection(combined)
 
     return None
 
@@ -316,7 +342,96 @@ def format_timestamp(ts: str | None) -> str:
         return "unknown"
 
 
-def format_output(sessions: list[dict], max_chars: int) -> str:
+CLAUDE_PLANS_DIR = os.path.expanduser("~/.claude/plans")
+
+
+def collect_plans(base_project_path: str, max_plans: int = 50) -> list[dict]:
+    """Collect plan files related to the project from ~/.claude/plans/.
+
+    Plans are matched by searching for the project's directory name or
+    common identifiers (repo name, ticket prefix) in the file content.
+    """
+    if not os.path.isdir(CLAUDE_PLANS_DIR):
+        return []
+
+    # Derive search terms from the project path
+    # e.g. /Users/mikko/code/dna/dna-sampo -> ["dna-sampo", "dna/dna-sampo"]
+    project_name = os.path.basename(base_project_path)
+    search_terms = [project_name.lower()]
+
+    plans = []
+    try:
+        entries = sorted(os.listdir(CLAUDE_PLANS_DIR))
+    except (OSError, PermissionError):
+        return []
+
+    for entry in entries:
+        if not entry.endswith(".md"):
+            continue
+        full = os.path.join(CLAUDE_PLANS_DIR, entry)
+        if not os.path.isfile(full):
+            continue
+
+        try:
+            with open(full, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read(8000)  # Read first 8KB for matching
+        except (OSError, PermissionError):
+            continue
+
+        content_lower = content.lower()
+        if not any(term in content_lower for term in search_terms):
+            continue
+
+        # Extract title (first # heading) and context
+        title = entry.removesuffix(".md")
+        context_snippet = ""
+        for line in content.split("\n"):
+            if line.startswith("# "):
+                title = line[2:].strip()
+                continue
+            if line.startswith("## Context") or line.startswith("## context"):
+                # Grab the next ~500 chars as context
+                idx = content.index(line) + len(line)
+                context_snippet = content[idx:idx + 500].strip()
+                break
+
+        mtime = os.path.getmtime(full)
+        plans.append({
+            "path": full,
+            "filename": entry,
+            "title": title,
+            "context": context_snippet,
+            "mtime": mtime,
+        })
+
+    plans.sort(key=lambda p: p["mtime"], reverse=True)
+    return plans[:max_plans]
+
+
+def format_plans_section(plans: list[dict]) -> str:
+    """Format collected plans into a summary section."""
+    if not plans:
+        return ""
+
+    parts = ["\n# Plans Summary\n\n"]
+    parts.append(f"Related plans found: {len(plans)}\n\n")
+
+    for plan in plans:
+        ts = format_timestamp(plan["mtime"])
+        parts.append(f"### {plan['title']} ({ts})\n")
+        if plan["context"]:
+            # Trim to first meaningful paragraph
+            ctx = plan["context"].strip()
+            if len(ctx) > 400:
+                ctx = ctx[:400] + "..."
+            parts.append(f"{ctx}\n\n")
+        else:
+            parts.append("\n")
+
+    return "".join(parts)
+
+
+def format_output(sessions: list[dict], max_chars: int, plans: list[dict] | None = None) -> str:
     """Format extracted sessions into structured text output."""
     if not sessions:
         return "# Conversation Mining Report\n\nNo conversations found for this project.\n"
@@ -335,11 +450,26 @@ def format_output(sessions: list[dict], max_chars: int) -> str:
         "# Conversation Mining Report\n"
         f"Sessions included: {len(sessions)}\n"
         f"Project directories: {len(proj_dirs)}\n"
-        f"---\n\n"
     )
+    if plans:
+        header += f"Related plans: {len(plans)}\n"
+    header += "---\n\n"
 
     output_parts = [header]
     current_chars = len(header)
+
+    # Plans first — they're higher-signal (decisions, approaches, context)
+    if plans:
+        plans_text = format_plans_section(plans)
+        if current_chars + len(plans_text) < max_chars:
+            output_parts.append(plans_text)
+            current_chars += len(plans_text)
+        else:
+            available = max_chars - current_chars - 100
+            if available > 500:
+                output_parts.append(plans_text[:available] + "\n\n[plans truncated]\n")
+                current_chars += available + 25
+
     budget_exhausted = False
 
     for session in sessions:
@@ -386,11 +516,12 @@ def main():
     parser = argparse.ArgumentParser(description="Extract Claude Code conversation transcripts")
     parser.add_argument("--cwd", default=os.getcwd(), help="Project directory")
     parser.add_argument("--max-sessions", type=int, default=200, help="Max sessions to include")
-    parser.add_argument("--max-chars", type=int, default=400000, help="Max output characters")
+    parser.add_argument("--max-chars", type=int, default=200000, help="Max output characters")
     parser.add_argument("--since", default=None, help="Only sessions after YYYY-MM-DD")
     parser.add_argument("--min-turns", type=int, default=2, help="Min user turns per session")
     parser.add_argument("--exact", action="store_true", help="Only match base + worktrees")
     parser.add_argument("--skip-reviews", action="store_true", help="Skip review/meta directories")
+    parser.add_argument("--no-plans", action="store_true", help="Exclude plan files from ~/.claude/plans/ (included by default)")
 
     args = parser.parse_args()
 
@@ -426,7 +557,12 @@ def main():
 
     print(f"Sessions with content: {len(sessions)}", file=sys.stderr)
 
-    output = format_output(sessions, args.max_chars)
+    plans = None
+    if not args.no_plans:
+        plans = collect_plans(base_path)
+        print(f"Related plans found: {len(plans)}", file=sys.stderr)
+
+    output = format_output(sessions, args.max_chars, plans=plans)
     print(output)
 
 

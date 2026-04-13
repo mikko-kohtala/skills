@@ -23,6 +23,8 @@ The bundled `scripts/extract_conversations.py` handles all filesystem I/O:
 - Finds conversation JSONL files in `~/.claude/projects/` for the current project
 - Includes worktree conversations (detects the `-worktrees/` convention automatically)
 - Extracts user prompts and assistant text responses (skips tool calls, thinking, subagents)
+- Filters out injected skill SKILL.md content (extracts only the `ARGUMENTS:` line)
+- Includes related plan files from `~/.claude/plans/` by default
 - Outputs a condensed, token-efficient summary
 
 ## Workflow
@@ -42,6 +44,8 @@ Useful flags:
 - `--skip-reviews` — Skip automated review/meta agent sessions
 - `--since YYYY-MM-DD` — Limit to recent conversations
 - `--max-sessions N` — Cap the number of sessions (default: 200)
+- `--no-plans` — Exclude plan files from `~/.claude/plans/` (included by default)
+- `--max-chars N` — Cap output size (default: 200000)
 
 ### Step 2: Check existing rules
 
@@ -100,11 +104,12 @@ python3 extract_conversations.py [OPTIONS]
 
 --cwd PATH           Project directory (default: current)
 --max-sessions N     Max sessions (default: 200)
---max-chars N        Max output chars (default: 400000)
+--max-chars N        Max output chars (default: 200000)
 --since YYYY-MM-DD   Filter by date
 --min-turns N        Min user turns per session (default: 2)
 --exact              Only base project + worktrees
 --skip-reviews       Skip -review- and -meta- directories
+--no-plans           Exclude plan files (included by default)
 ```
 
 The script writes progress to stderr and the report to stdout.
