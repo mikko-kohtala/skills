@@ -11,7 +11,7 @@ Usage:
 Options:
     --cwd PATH           Project directory (default: current directory)
     --max-sessions N     Maximum sessions to include (default: 200)
-    --max-chars N        Maximum output characters (default: 400000)
+    --max-chars N        Maximum output characters (default: 200000)
     --since YYYY-MM-DD   Only sessions after this date
     --min-turns N        Minimum user turns per session (default: 2)
     --exact              Only match base project + worktrees (not sibling projects)
@@ -215,7 +215,8 @@ def extract_session(path: str, max_assistant_chars: int = 800) -> dict | None:
                 if rec_type == "user":
                     text = _extract_user_text(rec)
                     if text:
-                        turns.append(("USER", text))
+                        role = "CORRECTION" if _detect_correction(text) else "USER"
+                        turns.append((role, text))
 
                 elif rec_type == "assistant":
                     text = _extract_assistant_text(rec, max_assistant_chars)
@@ -252,6 +253,31 @@ def _filter_skill_injection(text: str) -> str | None:
             return None
     # Skill injection with no arguments — skip entirely
     return None
+
+
+# Patterns that indicate a correction — checked at the START of the message only.
+# Two tiers: strong patterns (can appear anywhere in first 150 chars) and
+# start-only patterns (must be in the first 20 chars to avoid false positives).
+_CORRECTION_START = [
+    "no,", "no ", "wrong", "nope", "that's not", "thats not", "not what i",
+    "i said", "i already", "i meant", "i told you", "why did you",
+]
+_CORRECTION_NEARBY = [
+    "not correct", "don't do", "dont do", "should be", "please don't",
+    "please dont", "instead of", "not that",
+]
+
+
+def _detect_correction(text: str) -> bool:
+    """Detect if a user message is likely a correction to Claude's behavior."""
+    lower = text.lower()
+    # Strong signals: must appear in the first 20 chars (message opening)
+    opening = lower[:20]
+    if any(p in opening for p in _CORRECTION_START):
+        return True
+    # Weaker signals: can appear in the first 150 chars
+    prefix = lower[:150]
+    return any(p in prefix for p in _CORRECTION_NEARBY)
 
 
 def _extract_user_text(rec: dict) -> str | None:
@@ -292,6 +318,41 @@ def _extract_user_text(rec: dict) -> str | None:
     return None
 
 
+def _extract_tool_summary(content: list) -> str | None:
+    """Extract a compact summary of tool calls from assistant message content.
+
+    Returns a string like '[TOOLS: Read(src/lib/auth.ts), Bash(pnpm check)]'
+    or None if no tool calls found.
+    """
+    tools = []
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") != "tool_use":
+            continue
+        name = block.get("name", "unknown")
+        inp = block.get("input", {})
+        # Extract the most informative first argument
+        arg = ""
+        if isinstance(inp, dict):
+            for key in ("file_path", "command", "pattern", "path", "url", "query", "skill"):
+                if key in inp:
+                    val = str(inp[key])
+                    # Truncate long values
+                    if len(val) > 60:
+                        val = val[:57] + "..."
+                    arg = val
+                    break
+        if arg:
+            tools.append(f"{name}({arg})")
+        else:
+            tools.append(name)
+
+    if not tools:
+        return None
+    return "[TOOLS: " + ", ".join(tools) + "]"
+
+
 def _extract_assistant_text(rec: dict, max_chars: int) -> str | None:
     """Extract text blocks from an assistant message, truncating if needed."""
     msg = rec.get("message", {})
@@ -308,16 +369,24 @@ def _extract_assistant_text(rec: dict, max_chars: int) -> str | None:
         if block.get("type") == "text":
             text_parts.append(block.get("text", ""))
 
-    if not text_parts:
+    tool_summary = _extract_tool_summary(content)
+
+    if not text_parts and not tool_summary:
         return None
 
     combined = "\n".join(text_parts).strip()
-    if not combined:
-        return None
 
     if len(combined) > max_chars:
         combined = combined[:max_chars] + " [...]"
-    return combined
+
+    # Append tool summary after text (compact, high-signal)
+    if tool_summary:
+        if combined:
+            combined = combined + "\n" + tool_summary
+        else:
+            combined = tool_summary
+
+    return combined if combined else None
 
 
 def decode_project_dir_name(dir_name: str) -> str:
@@ -516,7 +585,7 @@ def main():
     parser = argparse.ArgumentParser(description="Extract Claude Code conversation transcripts")
     parser.add_argument("--cwd", default=os.getcwd(), help="Project directory")
     parser.add_argument("--max-sessions", type=int, default=200, help="Max sessions to include")
-    parser.add_argument("--max-chars", type=int, default=200000, help="Max output characters")
+    parser.add_argument("--max-chars", type=int, default=200000, help="Max output characters (default: 200000)")
     parser.add_argument("--since", default=None, help="Only sessions after YYYY-MM-DD")
     parser.add_argument("--min-turns", type=int, default=2, help="Min user turns per session")
     parser.add_argument("--exact", action="store_true", help="Only match base + worktrees")

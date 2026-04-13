@@ -22,7 +22,9 @@ The bundled `scripts/extract_conversations.py` handles all filesystem I/O:
 
 - Finds conversation JSONL files in `~/.claude/projects/` for the current project
 - Includes worktree conversations (detects the `-worktrees/` convention automatically)
-- Extracts user prompts and assistant text responses (skips tool calls, thinking, subagents)
+- Extracts user prompts and assistant text responses (skips thinking, subagents)
+- Extracts compact tool-call summaries (`[TOOLS: Read(...), Bash(...)]`) from assistant turns
+- Detects user corrections and tags them as `[CORRECTION]` turns
 - Filters out injected skill SKILL.md content (extracts only the `ARGUMENTS:` line)
 - Includes related plan files from `~/.claude/plans/` by default
 - Outputs a condensed, token-efficient summary
@@ -60,16 +62,18 @@ Say "already covered: <path>" instead of repeating existing content.
 
 Read the extracted conversation data and look for:
 
+- **`[CORRECTION]` turns** — User corrections to Claude, auto-detected by the extraction
+  script. These are the strongest signal for a missing rule. Start your analysis here.
+- **`[TOOLS: ...]` lines** — Tool call summaries appended to assistant turns. Reveal
+  actual workflows: which tools get used together and in what order.
 - **Repeated workflows** — Same type of task done across 3+ sessions
-- **User corrections** — When the user corrects Claude, that signals a missing rule
 - **Domain knowledge** — Project-specific terminology, architecture, naming conventions
   that keep being explained
 - **Multi-step procedures** — Sequences that could be codified as a skill
-- **Tool preferences** — Patterns in how tools are used or should be used
 - **Frustration signals** — Repeated clarifications, "I already told you", re-explaining
 
 Weight by frequency: patterns appearing in 3+ sessions are strong candidates.
-User corrections are the strongest signal for a missing rule.
+User corrections (`[CORRECTION]` turns) are the strongest signal for a missing rule.
 
 ### Step 4: Propose rules and skills
 

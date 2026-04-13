@@ -18,12 +18,12 @@ skill to identify recurring patterns and propose actionable rules and skills.
 
 1. **Read existing rules** listed above to understand what is already covered.
 
-2. **Identify patterns** across sessions:
+2. **Identify patterns** across sessions — start with the highest-signal markers:
+   - `[CORRECTION]` turns first — these are user corrections to Claude (strongest signal for a missing rule)
+   - `[TOOLS: ...]` lines — reveal actual workflows (which tools get used together, in what order)
    - Repeated workflows (same task type in 3+ sessions)
-   - User corrections to Claude (strongest signal for a missing rule)
    - Domain knowledge repeatedly explained
    - Multi-step procedures that could be skills
-   - Tool usage preferences
 
 3. **Propose rules** (3-8 `.md` files in `.claude/rules/`):
    - Each with short **When**, **Do**, **Don't** bullet sections
