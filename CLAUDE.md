@@ -41,6 +41,7 @@ A curated collection of skills for CLI-based AI coding assistants (Claude Code, 
 | excalidraw | Generate architecture diagrams on Excalidraw canvas |
 | grill-me | Stress-test plans and designs through relentless questioning |
 | linear-way | Linear-style product thinking for analyzing requests |
+| mine-conversations | Mine past Claude Code conversations for skill/rule patterns |
 
 ## Adding New Skills
 

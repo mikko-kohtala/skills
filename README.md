@@ -26,6 +26,7 @@ npx skills add https://github.com/mikko-kohtala/skills --skill harness-engineeri
 npx skills add https://github.com/mikko-kohtala/skills --skill excalidraw
 npx skills add https://github.com/mikko-kohtala/skills --skill grill-me
 npx skills add https://github.com/mikko-kohtala/skills --skill linear-way
+npx skills add https://github.com/mikko-kohtala/skills --skill mine-conversations
 ```
 
 ## Skills
@@ -47,6 +48,7 @@ npx skills add https://github.com/mikko-kohtala/skills --skill linear-way
 | [excalidraw](excalidraw/)                             | Generate architecture diagrams on Excalidraw canvas          | [edwingao28](https://github.com/edwingao28/excalidraw-skill)        |
 | [grill-me](grill-me/)                                 | Stress-test plans and designs through relentless questioning | [mattpocock](https://github.com/mattpocock/skills)                  |
 | [linear-way](linear-way/)                             | Linear-style product thinking for analyzing requests         | Mikko Kohtala                                                       |
+| [mine-conversations](mine-conversations/)             | Mine past Claude Code conversations for skill/rule patterns  | Mikko Kohtala                                                       |
 
 ## Reference Links
 
