@@ -136,18 +136,6 @@ For the agent to reason about behavior, the running app must be inspectable:
 - **Clean-checkout callable.** No hidden daemons humans must start first.
 - **Structured or parseable output** where natural (JSON, tabular) so downstream tools can chain without fragile regex.
 
-## Existing-repo adoption loop
-
-Brownfield is the common case. Apply in order:
-
-1. **Lock behavior with tests.** The agent moves faster when it can verify it didn't break anything.
-2. **Capture** the next 5–10 review comments and build failures the agent actually receives.
-3. **Bucket** by persona.
-4. **Codify** each bucket into the cheapest durable surface (doc → lint → test → reviewer).
-5. **Migrate** the codebase once a rule is load-bearing.
-6. **Shrink `AGENTS.md`** to a ~100-line map as `docs/` fills in.
-7. **Ratchet.** Set quality budgets (build time, file size, coverage, flake rate); when one is breached, decompose — don't relax the invariant.
-
 ## Spec as the real source of truth
 
 For libraries meant to be shared: **distribute the spec, not the code.** The spec plus the consumer's harness regenerates a valid implementation. Refine specs with a Ralph-style loop:
