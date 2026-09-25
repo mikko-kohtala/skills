@@ -42,6 +42,7 @@ A curated collection of skills for CLI-based AI coding assistants (Claude Code, 
 | grill-me | Stress-test plans and designs through relentless questioning |
 | linear-way | Linear-style product thinking for analyzing requests |
 | mine-conversations | Mine past Claude Code conversations for skill/rule patterns |
+| agent-native-repo-playbook | Audit and improve repos for agent-native solo-dev workflows |
 | wait-wtf | Plain-language recap of an agent session, its ticket and PR |
 
 ## Adding New Skills
