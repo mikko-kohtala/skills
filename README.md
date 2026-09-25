@@ -27,6 +27,7 @@ npx skills add https://github.com/mikko-kohtala/skills --skill excalidraw
 npx skills add https://github.com/mikko-kohtala/skills --skill grill-me
 npx skills add https://github.com/mikko-kohtala/skills --skill linear-way
 npx skills add https://github.com/mikko-kohtala/skills --skill mine-conversations
+npx skills add https://github.com/mikko-kohtala/skills --skill wait-wtf
 ```
 
 ## Skills
@@ -49,6 +50,7 @@ npx skills add https://github.com/mikko-kohtala/skills --skill mine-conversation
 | [grill-me](grill-me/)                                 | Stress-test plans and designs through relentless questioning | [mattpocock](https://github.com/mattpocock/skills)                  |
 | [linear-way](linear-way/)                             | Linear-style product thinking for analyzing requests         | Mikko Kohtala                                                       |
 | [mine-conversations](mine-conversations/)             | Mine past Claude Code conversations for skill/rule patterns  | Mikko Kohtala                                                       |
+| [wait-wtf](wait-wtf/)                                 | Plain-language recap of an agent session, its ticket and PR  | Mikko Kohtala                                                       |
 
 ## Reference Links
 
