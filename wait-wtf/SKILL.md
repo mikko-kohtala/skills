@@ -64,7 +64,7 @@ Use this exact shape. Write short, concrete lines in plain words, with no filler
 
 Rules:
 
-- Keep it to about 15 lines. If there were many changes, group them by outcome.
+- Keep it short enough to read in under a minute. If there were many changes, group them by outcome.
 - Mark anything that isn't confirmed. For example, "tests pass (not re-run)" differs from "tests pass".
 - Report failures plainly, such as "CI failed on lint" or "gave up on the migration". Don't soften them.
 - After the recap, stop. Don't add a closing question or offer more help.

@@ -38,10 +38,11 @@ The bundled `scripts/extract_conversations.py` handles all filesystem I/O:
 ### Step 1: Extract conversation data
 
 Run the extraction script. It auto-detects the base project path and finds all
-related conversations including worktrees.
+related conversations including worktrees. The script is `scripts/extract_conversations.py`
+in this skill's directory.
 
 ```bash
-python3 $SKILL_DIR/scripts/extract_conversations.py --cwd "$(pwd)" --min-turns 2
+python3 <skill-dir>/scripts/extract_conversations.py --cwd "$(pwd)" --min-turns 2
 ```
 
 Useful flags:
@@ -83,7 +84,6 @@ Then look for:
 Weight by frequency AND time spread: patterns appearing in 3+ sessions across multiple
 months are strong candidates. Patterns appearing only in the most recent 2 weeks may be
 situation-specific — flag these as "low confidence" or drop them.
-User corrections (`[CORRECTION]` turns) are the strongest signal for a missing rule.
 
 ### Step 4: Propose rules and skills
 
