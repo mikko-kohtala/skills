@@ -4,9 +4,10 @@
   "description": "General-purpose browser automation with Playwright for Claude Code with auto-detection and smart test management",
   "author": "lackeyjb",
   "main": "run.js",
+  "packageManager": "bun@1.4.2",
   "scripts": {
-    "setup": "npm install && npx playwright install chromium",
-    "install-all-browsers": "npx playwright install chromium firefox webkit"
+    "setup": "bun install && bunx playwright install chromium",
+    "install-all-browsers": "bunx playwright install chromium firefox webkit"
   },
   "keywords": [
     "playwright",
@@ -17,7 +18,7 @@
     "general-purpose"
   ],
   "dependencies": {
-    "playwright": "^1.48.0"
+    "playwright": "^1.63.0"
   },
   "engines": {
     "node": ">=14.0.0"

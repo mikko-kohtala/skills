@@ -44,7 +44,7 @@ The skill checks port 5173 and auto-starts Vite when needed, then cleans up afte
 
 ```bash
 cd $SKILL_DIR
-npm run setup
+bun run setup
 ```
 
 This installs Playwright and Chromium browser. Only needed once.
@@ -359,7 +359,7 @@ const { waitForShellPrompt, runCommand } = require('./lib/terminal-helpers');
 
 **Playwright not installed:**
 ```bash
-cd $SKILL_DIR && npm run setup
+cd $SKILL_DIR && bun run setup
 ```
 
 **Terminal output empty:**

@@ -33,11 +33,11 @@ Before using this skill, ensure Playwright is available:
 
 ```bash
 # Check if Playwright is installed
-npm list playwright 2>/dev/null || echo "Playwright not installed"
+bun pm ls 2>/dev/null | grep -q playwright || echo "Playwright not installed"
 
 # Install (if needed)
 cd ~/.claude/skills/playwright-skill
-npm run setup
+bun run setup
 ```
 
 ### Basic Configuration
