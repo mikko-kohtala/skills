@@ -4,6 +4,12 @@
 
 A curated collection of skills for CLI-based AI coding assistants (Claude Code, Codex CLI, Gemini CLI, etc.). Each skill teaches the agent a new capability.
 
+## Project Workflow
+
+Before changing this repository, read and follow `project-workflow/SKILL.md`. This is the skill's source directory; consuming repositories use the installed copy at `.agents/skills/project-workflow/SKILL.md`.
+
+Keep adoption opt-in per repository. Document project-scoped installation for both Codex and Claude Code, and tell users to add the workflow instruction to their existing `AGENTS.md` and `CLAUDE.md`. Preserve each repository's existing instructions.
+
 ## Adding New Skills
 
 1. Create `<skill-name>/` directory in the repo root
