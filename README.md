@@ -49,13 +49,12 @@ The installer adds the skill files; it does not add the always-on instruction to
 ```md
 ## Project workflow
 
-Before changing this repository, read and follow the repository-root
-`.agents/skills/project-workflow/SKILL.md`.
-
-Repository-specific instructions and the user's explicit directions take precedence.
+Before making changes, read and follow `.agents/skills/project-workflow/SKILL.md` from the repository root.
 ```
 
 Preserve the existing instructions. If `AGENTS.md` and `CLAUDE.md` already point to the same file, add the section once. Commit the installed skill files, the Claude skill link, the generated `skills-lock.json`, and the agent-file changes so fresh clones and worktrees keep the workflow. If the repository ignores any of these paths, adjust its ignore rules as part of adoption.
+
+Below that line, add only what differs from the skill for this repository: its required checks, worktree provisioning, cleanup hooks, and merge or release exceptions. Do not restate the skill's steps.
 
 Codex loads repository instructions automatically, while skills activate when explicitly requested or matched to a task. The instruction above makes reading this workflow part of every change in an adopting repository. See [OpenAI's instruction discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md#how-codex-discovers-guidance) and [skill activation documentation](https://learn.chatgpt.com/docs/build-skills#how-codex-uses-skills).
 
