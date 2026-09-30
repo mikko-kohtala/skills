@@ -29,7 +29,37 @@ npx skills add https://github.com/mikko-kohtala/skills --skill linear-way
 npx skills add https://github.com/mikko-kohtala/skills --skill mine-conversations
 npx skills add https://github.com/mikko-kohtala/skills --skill agent-native-repo-playbook
 npx skills add https://github.com/mikko-kohtala/skills --skill wait-wtf
+npx skills add https://github.com/mikko-kohtala/skills --skill project-workflow
 ```
+
+### Adopt the project workflow in a repository
+
+`project-workflow` provides the ticket → gwt worktree → verification → PR → merge → cleanup workflow. Install it only in repositories that should follow that process.
+
+From the target repository's working directory (use a worktree when adopting this workflow), run:
+
+```sh
+npx skills add https://github.com/mikko-kohtala/skills --skill project-workflow --agent codex claude-code --yes
+```
+
+This installs at project scope. The default symlink installation keeps the skill files in `.agents/skills/project-workflow/` for Codex and links `.claude/skills/project-workflow/` to the same copy for Claude Code. Do not add `--global` for repository-specific adoption. See the [skills CLI documentation](https://github.com/vercel-labs/skills#installation-scope) for installer options.
+
+The installer adds the skill files; it does not add the always-on instruction to your agent files. Append the following section to **both** the repository's existing `AGENTS.md` and `CLAUDE.md`, creating either file if absent:
+
+```md
+## Project workflow
+
+Before changing this repository, read and follow the repository-root
+`.agents/skills/project-workflow/SKILL.md`.
+
+Repository-specific instructions and the user's explicit directions take precedence.
+```
+
+Preserve the existing instructions. If `AGENTS.md` and `CLAUDE.md` already point to the same file, add the section once. Commit the installed skill files, the Claude skill link, the generated `skills-lock.json`, and the agent-file changes so fresh clones and worktrees keep the workflow. If the repository ignores any of these paths, adjust its ignore rules as part of adoption.
+
+Codex loads repository instructions automatically, while skills activate when explicitly requested or matched to a task. The instruction above makes reading this workflow part of every change in an adopting repository. See [OpenAI's instruction discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md#how-codex-discovers-guidance) and [skill activation documentation](https://learn.chatgpt.com/docs/build-skills#how-codex-uses-skills).
+
+When migrating from the shared dotfiles setup, remove the old workflow links at `~/.codex/AGENTS.md` and `~/code/mikko/AGENTS.md` / `CLAUDE.md` after the chosen repositories have adopted the skill. Update the dotfiles installer so it does not recreate those links. Preserve any unrelated global preferences. This lets each repository choose whether to adopt the workflow.
 
 ## Skills
 
@@ -53,6 +83,7 @@ npx skills add https://github.com/mikko-kohtala/skills --skill wait-wtf
 | [mine-conversations](mine-conversations/)                 | Mine past Claude Code conversations for skill/rule patterns  | Mikko Kohtala                                                           |
 | [agent-native-repo-playbook](agent-native-repo-playbook/) | Audit and improve repos for agent-native solo-dev workflows  | [wisdom-in-a-nutshell](https://github.com/wisdom-in-a-nutshell/.agents) |
 | [wait-wtf](wait-wtf/)                                     | Plain-language recap of an agent session, its ticket and PR  | Mikko Kohtala                                                           |
+| [project-workflow](project-workflow/)                     | Opt-in ticket, worktree, verification, PR, merge, and cleanup workflow | Mikko Kohtala                                                    |
 
 ## Reference Links
 
